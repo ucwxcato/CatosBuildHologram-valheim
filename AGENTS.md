@@ -60,6 +60,29 @@ The product has two deliberately different authority tiers:
 - Never send a gameplay build RPC from the client without server validation and
   an idempotent request path.
 
+## Phase 0 native findings
+
+The installed client assembly metadata confirms the native preview boundaries:
+`Player.m_placementGhost`, `Player.m_placementStatus`,
+`Player.UpdatePlacementGhost(bool)`, `Player.GetPlacementStatus()`,
+`Player.TryPlacePiece(Piece)`, `Player.PlacePiece(...)`, and
+`Player.FindClosestSnapPoints(...)`. `Piece.GetSnapPoints(...)` supplies native
+snap transforms. `WearNTear.GetSupport()`, `HaveSupport()`, and
+`GetSupportColorValue()` are available for real-piece stability inspection.
+
+The normal native flow creates the real piece in `PlacePiece` after
+`TryPlacePiece` validates `m_placementStatus`, then `Player.UpdatePlacement`
+calls `ConsumeResources(...)`. This split is not an atomic transaction. Treat
+server autobuild as disabled until runtime evidence proves a safe rollback or
+equivalent no-loss/no-duplication transaction. Never call `PlacePiece` from a
+client packet as an authority shortcut.
+
+The client assembly contains 1,311 types and the dedicated-server assembly
+contains 1,312; their `assembly_valheim.dll` files also differ in size. Use
+role-specific references/build checks and revalidate both processes before
+release. The protocol and BuildSight detached interop contract are defined in
+`DOCS/protocol.md`.
+
 ## Client/server artifact boundaries
 
 Prefer a package with explicit role-specific entry points:
@@ -140,6 +163,11 @@ artifact must load on
 `valheim_server.exe`, and the client artifact must load on `valheim.exe`. Test
 clients with and without BuildSight, vanilla clients where supported, and a
 clean client/server smoke path before publishing.
+
+The launchers use `JereKuusela-Server_devcommands` from the selected profile
+as a test-harness utility and copy it to the dedicated server for both modes.
+It is not a CatosBuildHologram dependency and must not be included in the
+release package.
 
 Retain build output, launcher output, client/server BepInEx logs, persistence
 evidence, packet/error diagnostics, and manual test notes. Never mark a plan

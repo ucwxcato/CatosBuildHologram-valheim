@@ -12,6 +12,8 @@ set "CLIENT_PROJECT=%REPO%\src\CatosBuildHologram.Client\CatosBuildHologram.Clie
 set "CLIENT_DLL=%REPO%\src\CatosBuildHologram.Client\bin\Release\net48\net48\CatosBuildHologram.Client.dll"
 set "CLIENT_PLUGINS=%PROFILE%\BepInEx\plugins"
 set "SERVER_PLUGINS=%SERVER%\BepInEx\plugins"
+set "DEVCOMMANDS_SOURCE=%CLIENT_PLUGINS%\JereKuusela-Server_devcommands"
+set "DEVCOMMANDS_DEST=%SERVER_PLUGINS%\JereKuusela-Server_devcommands"
 
 tasklist /FI "IMAGENAME eq valheim.exe" 2>nul | find /I "valheim.exe" >nul && goto :running
 tasklist /FI "IMAGENAME eq valheim_server.exe" 2>nul | find /I "valheim_server.exe" >nul && goto :running
@@ -21,6 +23,7 @@ if not exist "%PROFILE%\BepInEx\core\BepInEx.dll" goto :missing
 if not exist "%WORLD_SOURCE%\*.db2" goto :missing
 if not exist "%WORLD_SOURCE%\*.fwl2" goto :missing
 if not exist "%CLIENT_PROJECT%" goto :missing
+if not exist "%DEVCOMMANDS_SOURCE%\ServerDevcommands.dll" goto :missing
 
 dotnet build "%CLIENT_PROJECT%" -c Release
 if errorlevel 1 goto :failed
@@ -41,6 +44,11 @@ if not exist "%CLIENT_PLUGINS%" mkdir "%CLIENT_PLUGINS%"
 copy /Y "%CLIENT_DLL%" "%CLIENT_PLUGINS%\CatosBuildHologram.Client.dll" >nul
 if errorlevel 1 goto :failed
 
+if not exist "%SERVER_PLUGINS%" mkdir "%SERVER_PLUGINS%"
+xcopy "%DEVCOMMANDS_SOURCE%\*" "%DEVCOMMANDS_DEST%\" /E /I /Y >nul
+if errorlevel 4 goto :failed
+if not exist "%DEVCOMMANDS_DEST%\ServerDevcommands.dll" goto :failed
+
 REM Client-only mode: remove only CatosBuildHologram-related server DLLs.
 if exist "%SERVER_PLUGINS%\CatosBuildHologram*.dll" del /F /Q "%SERVER_PLUGINS%\CatosBuildHologram*.dll"
 if exist "%SERVER_PLUGINS%\CatosBuildContracts.dll" del /F /Q "%SERVER_PLUGINS%\CatosBuildContracts.dll"
@@ -51,6 +59,7 @@ echo.
 echo CatosBuildHologram CLIENT-ONLY test
 echo Client: %CLIENT_PLUGINS%\CatosBuildHologram.Client.dll
 echo Server: no CatosBuildHologram DLLs
+echo Utility: %DEVCOMMANDS_DEST%\ServerDevcommands.dll
 echo World:  %WORLD_SOURCE%
 echo Join:   127.0.0.1:2462
 echo Launch the CatosBuildHologram profile through r2modman.

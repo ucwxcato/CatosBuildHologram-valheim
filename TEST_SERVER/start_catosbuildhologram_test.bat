@@ -14,6 +14,8 @@ set "CLIENT_DLL=%REPO%\src\CatosBuildHologram.Client\bin\Release\net48\net48\Cat
 set "SERVER_DLL=%REPO%\src\CatosBuildHologram.Server\bin\Release\net48\net48\CatosBuildHologram.Server.dll"
 set "CLIENT_PLUGINS=%PROFILE%\BepInEx\plugins"
 set "SERVER_PLUGINS=%SERVER%\BepInEx\plugins"
+set "DEVCOMMANDS_SOURCE=%CLIENT_PLUGINS%\JereKuusela-Server_devcommands"
+set "DEVCOMMANDS_DEST=%SERVER_PLUGINS%\JereKuusela-Server_devcommands"
 
 tasklist /FI "IMAGENAME eq valheim.exe" 2>nul | find /I "valheim.exe" >nul && goto :running
 tasklist /FI "IMAGENAME eq valheim_server.exe" 2>nul | find /I "valheim_server.exe" >nul && goto :running
@@ -25,6 +27,7 @@ if not exist "%WORLD_SOURCE%\*.db2" goto :missing
 if not exist "%WORLD_SOURCE%\*.fwl2" goto :missing
 if not exist "%CLIENT_PROJECT%" goto :missing
 if not exist "%SERVER_PROJECT%" goto :missing
+if not exist "%DEVCOMMANDS_SOURCE%\ServerDevcommands.dll" goto :missing
 
 dotnet build "%CLIENT_PROJECT%" -c Release
 if errorlevel 1 goto :failed
@@ -51,6 +54,10 @@ if errorlevel 1 goto :failed
 copy /Y "%SERVER_DLL%" "%SERVER_PLUGINS%\CatosBuildHologram.Server.dll" >nul
 if errorlevel 1 goto :failed
 
+xcopy "%DEVCOMMANDS_SOURCE%\*" "%DEVCOMMANDS_DEST%\" /E /I /Y >nul
+if errorlevel 4 goto :failed
+if not exist "%DEVCOMMANDS_DEST%\ServerDevcommands.dll" goto :failed
+
 if exist "%REPO%\src\CatosBuildHologram.Shared\bin\Release\net48\net48\CatosBuildContracts.dll" (
   copy /Y "%REPO%\src\CatosBuildHologram.Shared\bin\Release\net48\net48\CatosBuildContracts.dll" "%CLIENT_PLUGINS%\CatosBuildContracts.dll" >nul
   copy /Y "%REPO%\src\CatosBuildHologram.Shared\bin\Release\net48\net48\CatosBuildContracts.dll" "%SERVER_PLUGINS%\CatosBuildContracts.dll" >nul
@@ -61,6 +68,7 @@ echo.
 echo CatosBuildHologram CLIENT + SERVER test
 echo Client: %CLIENT_PLUGINS%\CatosBuildHologram.Client.dll
 echo Server: %SERVER_PLUGINS%\CatosBuildHologram.Server.dll
+echo Utility: %DEVCOMMANDS_DEST%\ServerDevcommands.dll
 echo World:  %WORLD_SOURCE%
 echo Join:   127.0.0.1:2462
 echo Launch the CatosBuildHologram profile through r2modman.
@@ -81,4 +89,3 @@ exit /b 1
 echo ERROR: Build, junction validation, or deployment failed.
 pause
 exit /b 1
-

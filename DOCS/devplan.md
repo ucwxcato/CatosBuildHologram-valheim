@@ -1,8 +1,8 @@
 # CatosBuildHologram — Development Plan
 
-> **Status:** Authored plan. The repository currently has no implementation,
-> release artifacts, runtime load evidence, network evidence, persistence
-> evidence, or gameplay verification.
+> **Status:** Phase 0 discovery artifacts are in place. The repository still
+> has no implementation, release artifacts, runtime load evidence, network
+> evidence, persistence evidence, or gameplay verification.
 >
 > **Purpose:** Let players plan construction locally on vanilla servers, or use
 > server-validated shared blueprints and support-safe ordered construction when
@@ -21,6 +21,108 @@
 > `6000.0.75.2503836`, BepInExPack Valheim `5.4.2350`, BepInEx `5.4.23.5`,
 > .NET Framework `4.8`. These are specified baseline values and must be
 > refreshed against installed assemblies before implementation.
+
+## Phase 0 discovery record (2026-09-11)
+
+This section records the first environment and native metadata pass. It is
+evidence for planning and adapter boundaries, not gameplay verification.
+
+### Environment evidence
+
+- The client managed assembly was refreshed into the ignored `lib/` directory
+  with `scripts/setup-references.ps1`; 11 required Unity, Valheim, BepInEx,
+  and Harmony reference DLLs are present.
+- The installed client assembly is
+  `C:\Program Files (x86)\Steam\steamapps\common\Valheim\valheim_Data\Managed\assembly_valheim.dll`,
+  2,568,192 bytes, assembly/file version `0.0.0.0`, last written 2026-09-11.
+- The installed dedicated-server assembly is
+  `C:\Program Files (x86)\Steam\steamapps\common\Valheim dedicated server\valheim_server_Data\Managed\assembly_valheim.dll`,
+  2,560,000 bytes, assembly/file version `0.0.0.0`, last written 2026-09-11.
+  The different size means client and server references must be checked
+  independently; the client DLL must not be treated as server proof.
+- The selected r2modman profile contains BepInEx `5.4.23.5` and the
+  `JereKuusela-Server_devcommands` test-harness plugin. It is not a clean
+  verification profile because it also contains unrelated mods; clean-profile
+  runtime evidence remains required.
+- `scripts/inspect-native.ps1` now reads assembly metadata through Mono.Cecil
+  from the selected profile, avoiding false conclusions from loading Unity
+  assemblies outside the Valheim process.
+
+### Verified native adapter candidates
+
+The client assembly metadata contains 1,311 types and confirms these relevant
+members:
+
+```text
+Player.m_placementGhost                    GameObject
+Player.m_placementStatus                   Player.PlacementStatus
+Player.UpdatePlacementGhost(bool)
+Player.GetPlacementStatus()                Player.PlacementStatus
+Player.TryPlacePiece(Piece)                 bool
+Player.PlacePiece(Piece, Vector3, Quaternion, bool, bool)
+Player.HaveRequirements(Piece, Player.RequirementMode)
+Player.ConsumeResources(Piece.Requirement[], int, int, int)
+Player.FindClosestSnapPoints(...)
+Piece.GetSnapPoints(List<Transform>)
+WearNTear.GetSupport()                      float
+WearNTear.HaveSupport()                     bool
+WearNTear.GetSupportColorValue()            float
+WearNTear.UpdateSupport()
+Inventory.CountItems(string, int, bool)     int
+Inventory.HaveItem(string, bool)            bool
+ZNetView.GetZDO()                            ZDO
+ZNetView.InvokeRPC(...)
+Hud.m_hoverName                             TextMeshProUGUI
+```
+
+`Player.PlacementStatus` exposes `Valid`, `Invalid`, `BlockedbyPlayer`,
+`NoBuildZone`, `PrivateZone`, `MoreSpace`, `ExtensionMissingStation`,
+`WrongBiome`, `NeedCultivated`, `NeedDirt`, `NotInDungeon`, `DeepSnow`,
+`NoSnow`, `NoTeleportArea`, and `NoRayHits`. `Piece.Requirement` exposes
+`m_resItem`, `m_amount`, `m_amountPerLevel`, and
+`m_extraAmountOnlyOneIngredient`.
+
+The native preview already calculates terrain, collision, snapping, no-build,
+private-area, biome, station, and player-blocking conditions inside
+`UpdatePlacementGhost`. The adapter must observe this state rather than
+reimplementing a competing placement simulation.
+
+### Transaction decision and remaining blocker
+
+Metadata inspection shows the normal native path is ordered as:
+
+```text
+UpdatePlacementGhost(true)
+-> check Player.m_placementStatus
+-> TryPlacePiece(piece)
+-> PlacePiece(piece, ghost.position, ghost.rotation, true, cheated)
+-> ConsumeResources(piece.m_resources, -1, 0, 1)
+```
+
+`TryPlacePiece`/`PlacePiece` instantiate and initialize the real piece before
+`UpdatePlacement` calls `ConsumeResources`. This is a useful native guided
+placement path, but it is not proof of an atomic server autobuild transaction:
+the real piece and material charge are separate operations, and the server
+does not have a client UI ghost by default. Therefore Phase 5 autobuild stays
+disabled until runtime hooks prove a no-duplication/no-loss path, such as a
+server-side transaction wrapper with rollback or a verified native operation
+that combines creation and cost handling. No client packet may call
+`PlacePiece` as a shortcut.
+
+### Phase 0 decisions
+
+- Use role-separated client/server artifacts, with process guards, unless a
+  single assembly is proven safe in both processes. The different installed
+  client/server assemblies reinforce this boundary.
+- Use `Player.UpdatePlacementGhost` and the native `m_placementGhost` as the
+  preview/snap source. Use detached position/rotation/piece identity values in
+  blueprint records.
+- Use `WearNTear` support methods for real-piece status when available. A
+  pre-placement hologram status remains predicted/unknown until runtime proves
+  that a temporary preview can safely expose equivalent support semantics.
+- Use protocol major version 1, request IDs, server-generated blueprint IDs,
+  monotonic revisions, bounded records/messages, and the detached BuildSight
+  contract defined in [`protocol.md`](protocol.md).
 
 ## 0. Outcome
 
@@ -398,6 +500,14 @@ The planner must:
 The client may preview an order for usability, but the server's order is the
 only order that can build.
 
+### 5.2.1 Test-harness utility
+
+The local launchers may copy the existing
+`JereKuusela-Server_devcommands\ServerDevcommands.dll` plugin folder from the
+selected `CatosBuildHologram` r2modman profile to the dedicated server. This
+is test-harness support only; it is not part of the Hologram product, protocol,
+dependency graph, or release package.
+
 ### 5.3 Inventory and transaction rules
 
 - Resolve exact native cost from the server-side piece definition at the moment
@@ -587,21 +697,28 @@ When CatosBuildSight is present on the same client:
 
 ### Phase 0 — Native, authority, and protocol discovery
 
-- [ ] Confirm repository state and applicable parent instructions.
-- [ ] Refresh client/server managed and BepInEx references.
-- [ ] Inspect native build preview, piece identity, placement confirmation,
+- [x] Confirm repository state and applicable parent instructions.
+- [x] Refresh client managed and BepInEx references; inspect the dedicated
+  server managed assembly separately so unlike client/server DLLs are not
+  mixed into `lib/`.
+- [x] Inspect native build preview, piece identity, placement confirmation,
   stability/support, inventory cost, save lifecycle, and networking signatures
-  against installed assemblies.
-- [ ] Determine whether one package can safely expose separate client/server
-  entry points or whether separate artifacts are mandatory.
+  against installed assemblies. Runtime support and transaction verification
+  remain explicit follow-up gates.
+- [x] Determine whether one package can safely expose separate client/server
+  entry points or whether separate artifacts are mandatory. The current
+  decision is role-separated artifacts with process guards.
 - [ ] Determine a native/transaction-safe path for “build real piece and charge
-  exact materials”; do not proceed to autobuild if this is not provable.
-- [ ] Define protocol version, request IDs, revision semantics, bounded message
-  sizes, and CatosBuildSight contract fields.
-- [ ] Record all signature differences and unresolved support/transaction
-  semantics in this plan before implementation.
-- [ ] **Verify:** assembly notes, transaction decision, protocol document, and
-  deployment-role decision exist; no authority behavior is assumed.
+  exact materials”; metadata confirms the native order but not atomicity, so
+  this remains a release-blocking runtime investigation.
+- [x] Define protocol version, request IDs, revision semantics, bounded message
+  sizes, and CatosBuildSight contract fields in [`protocol.md`](protocol.md).
+- [x] Record all currently known signature differences and unresolved
+  support/transaction semantics in this plan before implementation.
+- [x] **Verify:** assembly notes, transaction decision, protocol document, and
+  deployment-role decision exist; the documentation artifacts exist, but the
+  transaction safety and gameplay/runtime portions are intentionally not
+  complete.
 
 ### Phase 1 — Role-separated plugin skeleton
 
@@ -714,6 +831,9 @@ When CatosBuildSight is present on the same client:
   Harmony patches for unintended mutation.
 - [ ] Complete the shared launcher checks for executable, references, world,
   profile, BepInEx freshness, build output, and role-specific deployment.
+- [ ] Verify both launchers source `JereKuusela-Server_devcommands` from the
+  selected r2modman profile and deploy it only to the dedicated server test
+  plugin directory.
 - [ ] Run the full verification matrix with logs and manual notes retained.
 - [ ] Produce a release package with explicit server/client artifacts and no
   runtime state or world data.
