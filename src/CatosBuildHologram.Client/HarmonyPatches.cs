@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using HarmonyLib;
+using UnityEngine;
 
 namespace CatosBuildHologram.Client
 {
@@ -29,6 +31,16 @@ namespace CatosBuildHologram.Client
         private static void Postfix(Piece piece, UnityEngine.Vector3 pos, UnityEngine.Quaternion rot)
         {
             ClientPlugin.Instance?.Guided?.OnNativePiecePlaced(piece, pos, rot);
+        }
+    }
+
+    [HarmonyPatch(typeof(Piece), nameof(Piece.GetSnapPoints),
+        new[] { typeof(Vector3), typeof(float), typeof(List<Transform>), typeof(List<Piece>) })]
+    internal static class PieceNearbySnapPointsPatch
+    {
+        private static void Postfix(Vector3 point, float radius, List<Transform> points)
+        {
+            ClientPlugin.Instance?.Renderer?.AppendNearbySnapPoints(point, radius, points);
         }
     }
 }

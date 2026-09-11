@@ -13,6 +13,31 @@ namespace CatosBuildHologram.Client
 
         internal int Count => _views.Count;
 
+        internal void AppendNearbySnapPoints(Vector3 point, float radius, List<Transform> points)
+        {
+            if (points == null || radius <= 0f)
+            {
+                return;
+            }
+
+            var radiusSquared = radius * radius;
+            foreach (var view in _views.Values)
+            {
+                if (!IsAlive(view.Root))
+                {
+                    continue;
+                }
+
+                foreach (var snapPoint in view.SnapPoints)
+                {
+                    if (snapPoint != null && (snapPoint.position - point).sqrMagnitude <= radiusSquared)
+                    {
+                        points.Add(snapPoint);
+                    }
+                }
+            }
+        }
+
         internal void Sync(IList<BlueprintRecord> records)
         {
             var activeIds = new HashSet<string>(StringComparer.Ordinal);
@@ -131,6 +156,7 @@ namespace CatosBuildHologram.Client
             transformMap[sourceRoot] = root.transform;
             CopyTransformTree(sourceRoot, root.transform, transformMap);
             CopyRendererTree(sourceRoot, transformMap);
+            root.SetActive(true);
             return root;
         }
 
@@ -140,6 +166,11 @@ namespace CatosBuildHologram.Client
             target.localPosition = source.localPosition;
             target.localRotation = source.localRotation;
             target.localScale = source.localScale;
+            target.gameObject.SetActive(source.gameObject.activeSelf);
+            if (source.CompareTag("snappoint"))
+            {
+                target.gameObject.tag = "snappoint";
+            }
 
             for (var index = 0; index < source.childCount; index++)
             {
@@ -154,12 +185,40 @@ namespace CatosBuildHologram.Client
         private static void CopyRendererTree(Transform sourceRoot,
             Dictionary<Transform, Transform> transformMap)
         {
+            var lodControlled = new HashSet<Renderer>();
+            var preferredLod = new HashSet<Renderer>();
+            foreach (var lodGroup in sourceRoot.GetComponentsInChildren<LODGroup>(true))
+            {
+                var lods = lodGroup.GetLODs();
+                foreach (var lod in lods)
+                {
+                    foreach (var renderer in lod.renderers)
+                    {
+                        if (renderer != null)
+                        {
+                            lodControlled.Add(renderer);
+                        }
+                    }
+                }
+                if (lods.Length > 0)
+                {
+                    foreach (var renderer in lods[0].renderers)
+                    {
+                        if (renderer != null)
+                        {
+                            preferredLod.Add(renderer);
+                        }
+                    }
+                }
+            }
+
             foreach (var sourceTransform in transformMap.Keys)
             {
                 var targetTransform = transformMap[sourceTransform];
                 var meshFilter = sourceTransform.GetComponent<MeshFilter>();
                 var meshRenderer = sourceTransform.GetComponent<MeshRenderer>();
-                if (meshFilter != null && meshRenderer != null)
+                if (meshFilter != null
+                    && ShouldCopyRenderer(meshRenderer, sourceRoot, lodControlled, preferredLod))
                 {
                     var targetFilter = targetTransform.gameObject.AddComponent<MeshFilter>();
                     targetFilter.sharedMesh = meshFilter.sharedMesh;
@@ -168,7 +227,7 @@ namespace CatosBuildHologram.Client
                 }
 
                 var skinnedRenderer = sourceTransform.GetComponent<SkinnedMeshRenderer>();
-                if (skinnedRenderer != null)
+                if (ShouldCopyRenderer(skinnedRenderer, sourceRoot, lodControlled, preferredLod))
                 {
                     var targetRenderer = targetTransform.gameObject.AddComponent<SkinnedMeshRenderer>();
                     targetRenderer.sharedMesh = skinnedRenderer.sharedMesh;
@@ -185,6 +244,33 @@ namespace CatosBuildHologram.Client
                     CopyRendererSettings(skinnedRenderer, targetRenderer);
                 }
             }
+        }
+
+        private static bool ShouldCopyRenderer(Renderer renderer, Transform sourceRoot,
+            HashSet<Renderer> lodControlled, HashSet<Renderer> preferredLod)
+        {
+            return renderer != null
+                && renderer.enabled
+                && IsActiveBelowRoot(renderer.transform, sourceRoot)
+                && (!lodControlled.Contains(renderer) || preferredLod.Contains(renderer));
+        }
+
+        private static bool IsActiveBelowRoot(Transform candidate, Transform sourceRoot)
+        {
+            var current = candidate;
+            while (current != null)
+            {
+                if (current == sourceRoot)
+                {
+                    return true;
+                }
+                if (!current.gameObject.activeSelf)
+                {
+                    return false;
+                }
+                current = current.parent;
+            }
+            return false;
         }
 
         private static Transform MapTransform(Transform source,
@@ -292,6 +378,7 @@ namespace CatosBuildHologram.Client
 
             internal GameObject Root { get; }
             internal bool HasVisibleRenderer => Root.GetComponentsInChildren<Renderer>(true).Length > 0;
+            internal IReadOnlyList<Transform> SnapPoints { get; private set; }
 
             internal void SetColor(Color color)
             {
@@ -318,6 +405,16 @@ namespace CatosBuildHologram.Client
 
             private void PrepareRoot()
             {
+                var snapPoints = new List<Transform>();
+                foreach (var candidate in Root.GetComponentsInChildren<Transform>())
+                {
+                    if (candidate.CompareTag("snappoint"))
+                    {
+                        snapPoints.Add(candidate);
+                    }
+                }
+                SnapPoints = snapPoints;
+
                 foreach (var behaviour in Root.GetComponentsInChildren<Behaviour>(true))
                 {
                     if (behaviour != null)
@@ -348,7 +445,6 @@ namespace CatosBuildHologram.Client
                         continue;
                     }
 
-                    renderer.enabled = true;
                     renderer.shadowCastingMode = ShadowCastingMode.Off;
                     renderer.receiveShadows = false;
                     var hologramMaterial = CreateHologramMaterial();

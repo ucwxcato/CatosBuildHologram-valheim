@@ -772,6 +772,9 @@ When CatosBuildSight is present on the same client:
 - [x] Implement a bounded client hologram renderer from detached blueprint
   records, using local native piece prefabs without creating fake network
   Pieces. The canonical server-record feed remains pending.
+- [x] Contribute detached hologram `snappoint` transforms to Valheim's existing
+  nearby snap query in client-only mode, without colliders, fake network
+  Pieces, or server/world mutation. Runtime snap fidelity remains pending.
 - [x] Implement green/red/amber/gray status-color mapping and a bounded HUD
   status surface. Server reason/status authority remains pending.
 - [ ] Implement status refresh/revision handling and stale-state behavior.

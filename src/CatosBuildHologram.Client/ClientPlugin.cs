@@ -28,6 +28,7 @@ namespace CatosBuildHologram.Client
 
         internal NativeBuildPreviewController PreviewController => _previewController;
         internal GuidedBuildService Guided => _guided;
+        internal HologramRenderer Renderer => _renderer;
 
         private void Awake()
         {
