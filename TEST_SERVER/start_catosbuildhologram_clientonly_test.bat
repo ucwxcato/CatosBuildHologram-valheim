@@ -15,6 +15,7 @@ set "CLIENT_PLUGINS=%PROFILE%\BepInEx\plugins"
 set "SERVER_PLUGINS=%SERVER%\BepInEx\plugins"
 set "DEVCOMMANDS_SOURCE=%CLIENT_PLUGINS%\JereKuusela-Server_devcommands"
 set "DEVCOMMANDS_DEST=%SERVER_PLUGINS%\JereKuusela-Server_devcommands"
+set "SteamAppId=892970"
 
 tasklist /FI "IMAGENAME eq valheim.exe" 2>nul | find /I "valheim.exe" >nul && goto :running
 tasklist /FI "IMAGENAME eq valheim_server.exe" 2>nul | find /I "valheim_server.exe" >nul && goto :running
@@ -69,7 +70,7 @@ echo Join:   127.0.0.1:2462
 echo Launch the CatosBuildHologram profile through r2modman.
 echo.
 cd /d "%SERVER%"
-"%SERVER%\valheim_server.exe" -name "CatosBuildHologram Vanilla Test" -port 2462 -world "Dedicated" -password "696969" -savedir "%SAVE_ROOT%" -public 0
+"%SERVER%\valheim_server.exe" -nographics -batchmode -name "CatosBuildHologram Vanilla Test" -port 2462 -world "Dedicated" -password "696969" -savedir "%SAVE_ROOT%" -public 0
 exit /b %ERRORLEVEL%
 
 :running
