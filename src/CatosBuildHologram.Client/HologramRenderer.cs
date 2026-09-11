@@ -91,7 +91,12 @@ namespace CatosBuildHologram.Client
         {
             try
             {
-                var root = UnityEngine.Object.Instantiate(source.gameObject);
+                var root = CreateVisualOnlyClone(source.transform);
+                if (root == null)
+                {
+                    return null;
+                }
+
                 root.name = "CatosBuildHologram_Local_" + record.BlueprintId;
                 root.hideFlags = HideFlags.DontSave;
                 return new HologramView(root);
@@ -100,6 +105,94 @@ namespace CatosBuildHologram.Client
             {
                 return null;
             }
+        }
+
+        private static GameObject CreateVisualOnlyClone(Transform sourceRoot)
+        {
+            if (sourceRoot == null)
+            {
+                return null;
+            }
+
+            var root = new GameObject("CatosBuildHologram_VisualRoot");
+            var transformMap = new Dictionary<Transform, Transform>();
+            transformMap[sourceRoot] = root.transform;
+            CopyTransformTree(sourceRoot, root.transform, transformMap);
+            CopyRendererTree(sourceRoot, transformMap);
+            return root;
+        }
+
+        private static void CopyTransformTree(Transform source, Transform target,
+            Dictionary<Transform, Transform> transformMap)
+        {
+            target.localPosition = source.localPosition;
+            target.localRotation = source.localRotation;
+            target.localScale = source.localScale;
+
+            for (var index = 0; index < source.childCount; index++)
+            {
+                var sourceChild = source.GetChild(index);
+                var targetChild = new GameObject(sourceChild.name).transform;
+                targetChild.SetParent(target, false);
+                transformMap[sourceChild] = targetChild;
+                CopyTransformTree(sourceChild, targetChild, transformMap);
+            }
+        }
+
+        private static void CopyRendererTree(Transform sourceRoot,
+            Dictionary<Transform, Transform> transformMap)
+        {
+            foreach (var sourceTransform in transformMap.Keys)
+            {
+                var targetTransform = transformMap[sourceTransform];
+                var meshFilter = sourceTransform.GetComponent<MeshFilter>();
+                var meshRenderer = sourceTransform.GetComponent<MeshRenderer>();
+                if (meshFilter != null && meshRenderer != null)
+                {
+                    var targetFilter = targetTransform.gameObject.AddComponent<MeshFilter>();
+                    targetFilter.sharedMesh = meshFilter.sharedMesh;
+                    var targetRenderer = targetTransform.gameObject.AddComponent<MeshRenderer>();
+                    CopyRendererSettings(meshRenderer, targetRenderer);
+                }
+
+                var skinnedRenderer = sourceTransform.GetComponent<SkinnedMeshRenderer>();
+                if (skinnedRenderer != null)
+                {
+                    var targetRenderer = targetTransform.gameObject.AddComponent<SkinnedMeshRenderer>();
+                    targetRenderer.sharedMesh = skinnedRenderer.sharedMesh;
+                    targetRenderer.localBounds = skinnedRenderer.localBounds;
+                    targetRenderer.updateWhenOffscreen = skinnedRenderer.updateWhenOffscreen;
+                    targetRenderer.rootBone = MapTransform(skinnedRenderer.rootBone, transformMap);
+                    var bones = skinnedRenderer.bones;
+                    var mappedBones = new Transform[bones.Length];
+                    for (var boneIndex = 0; boneIndex < bones.Length; boneIndex++)
+                    {
+                        mappedBones[boneIndex] = MapTransform(bones[boneIndex], transformMap);
+                    }
+                    targetRenderer.bones = mappedBones;
+                    CopyRendererSettings(skinnedRenderer, targetRenderer);
+                }
+            }
+        }
+
+        private static Transform MapTransform(Transform source,
+            Dictionary<Transform, Transform> transformMap)
+        {
+            if (source == null || !transformMap.TryGetValue(source, out var mapped))
+            {
+                return null;
+            }
+            return mapped;
+        }
+
+        private static void CopyRendererSettings(Renderer source, Renderer target)
+        {
+            target.sharedMaterials = source.sharedMaterials;
+            target.enabled = source.enabled;
+            target.shadowCastingMode = source.shadowCastingMode;
+            target.receiveShadows = source.receiveShadows;
+            target.lightProbeUsage = source.lightProbeUsage;
+            target.reflectionProbeUsage = source.reflectionProbeUsage;
         }
 
         private static void UpdateView(HologramView view, BlueprintRecord record)
