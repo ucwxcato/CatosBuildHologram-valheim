@@ -106,7 +106,10 @@ namespace CatosBuildHologram.Client
 
         internal void LogLocalBlueprint(CatosBuildHologram.Shared.Contracts.BlueprintRecord blueprint)
         {
-            Logger.LogInfo("Stored local blueprint " + blueprint.BlueprintId + " for " + blueprint.PieceTypeId);
+            Logger.LogInfo("Stored local blueprint " + blueprint.BlueprintId + " for " + blueprint.PieceTypeId
+                + " at (" + blueprint.Transform.PositionX.ToString("F2") + ", "
+                + blueprint.Transform.PositionY.ToString("F2") + ", "
+                + blueprint.Transform.PositionZ.ToString("F2") + ")");
         }
     }
 }

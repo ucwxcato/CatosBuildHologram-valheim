@@ -10,7 +10,7 @@ namespace CatosBuildHologram.Client
 {
     internal sealed class LocalPlanPersistence
     {
-        private const int SchemaVersion = 1;
+        private const int SchemaVersion = 2;
         private readonly string _path;
 
         internal LocalPlanPersistence(string path)

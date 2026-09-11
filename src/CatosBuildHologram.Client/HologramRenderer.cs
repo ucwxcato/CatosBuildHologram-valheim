@@ -35,8 +35,12 @@ namespace CatosBuildHologram.Client
                     }
 
                     view = CreateView(record, source);
-                    if (view == null)
+                    if (view == null || !view.HasVisibleRenderer)
                     {
+                        if (view != null)
+                        {
+                            DestroyRoot(view.Root);
+                        }
                         continue;
                     }
                     _views[record.BlueprintId] = view;
@@ -59,11 +63,11 @@ namespace CatosBuildHologram.Client
             }
         }
 
-        internal void ShowLocal(BlueprintRecord record, Piece source)
+        internal bool ShowLocal(BlueprintRecord record, Piece source)
         {
             if (record == null || source == null || string.IsNullOrWhiteSpace(record.BlueprintId))
             {
-                return;
+                return false;
             }
 
             if (_views.TryGetValue(record.BlueprintId, out var oldView))
@@ -72,11 +76,18 @@ namespace CatosBuildHologram.Client
             }
 
             var view = CreateView(record, source);
-            if (view != null)
+            if (view == null || !view.HasVisibleRenderer)
             {
-                _views[record.BlueprintId] = view;
-                UpdateView(view, record);
+                if (view != null)
+                {
+                    DestroyRoot(view.Root);
+                }
+                return false;
             }
+
+            _views[record.BlueprintId] = view;
+            UpdateView(view, record);
+            return true;
         }
 
         internal void Clear()
@@ -280,6 +291,7 @@ namespace CatosBuildHologram.Client
             }
 
             internal GameObject Root { get; }
+            internal bool HasVisibleRenderer => Root.GetComponentsInChildren<Renderer>(true).Length > 0;
 
             internal void SetColor(Color color)
             {
@@ -337,6 +349,8 @@ namespace CatosBuildHologram.Client
                     }
 
                     renderer.enabled = true;
+                    renderer.shadowCastingMode = ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
                     var hologramMaterial = CreateHologramMaterial();
                     if (hologramMaterial != null)
                     {

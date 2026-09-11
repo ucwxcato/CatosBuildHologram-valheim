@@ -1,11 +1,16 @@
 using System;
+using System.Reflection;
 using CatosBuildHologram.Shared.Contracts;
+using HarmonyLib;
 using UnityEngine;
 
 namespace CatosBuildHologram.Client
 {
     internal sealed class NativeBuildPreviewController
     {
+        private static readonly FieldInfo PlacementGhostField
+            = AccessTools.Field(typeof(Player), "m_placementGhost");
+
         private readonly ClientConfig _config;
         private readonly LocalPlanStore _localPlans;
         private readonly HologramRenderer _renderer;
@@ -49,11 +54,13 @@ namespace CatosBuildHologram.Client
                 return false;
             }
 
-            var transform = piece.transform;
-            if (transform == null)
+            var placementGhost = PlacementGhostField?.GetValue(player) as GameObject;
+            if (placementGhost == null || !placementGhost.activeInHierarchy)
             {
                 return false;
             }
+
+            var transform = placementGhost.transform;
 
             var detachedTransform = new TransformData
             {
@@ -87,7 +94,12 @@ namespace CatosBuildHologram.Client
                 return false;
             }
 
-            _renderer.ShowLocal(blueprint, piece);
+            var visualSource = placementGhost.GetComponent<Piece>() ?? piece;
+            if (!_renderer.ShowLocal(blueprint, visualSource))
+            {
+                _localPlans.Remove(blueprint.BlueprintId);
+                return false;
+            }
 
             _lastInterceptFrame = Time.frameCount;
             if (_config.DebugLogging.Value)
