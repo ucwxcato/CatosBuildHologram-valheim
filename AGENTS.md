@@ -12,8 +12,8 @@ The sibling client-only display companion is
 [`../CatosBuildSight/DOCS/devplan.md`](../CatosBuildSight/DOCS/devplan.md).
 Shared Valheim setup rules are in [`../world-setup.md`](../world-setup.md).
 
-The repository now contains the Phase 1 role-separated plugin skeleton. Do not
-claim that blueprint behavior, persistence, networking, installation, or
+The repository now contains the Phase 2 client-only interception skeleton.
+Do not claim that blueprint visuals, persistence, networking, installation, or
 gameplay is complete until the corresponding runtime evidence, network tests,
 persistence checks, and manual gameplay tests exist. A successful build is not
 gameplay verification.
@@ -82,6 +82,22 @@ contains 1,312; their `assembly_valheim.dll` files also differ in size. Use
 role-specific references/build checks and revalidate both processes before
 release. The protocol and BuildSight detached interop contract are defined in
 `DOCS/protocol.md`.
+
+## Phase 2 native interception boundary
+
+The client patch targets `Player.TryPlacePiece(Piece)` only. When explicitly
+enabled, it accepts only the already-native `PlacementStatus.Valid` preview,
+copies the piece name and transform into a detached local record, and returns
+`false` from the prefix so Valheim does not instantiate the real piece. The
+verified native caller then skips its `ConsumeResources` and build-stamina
+branch for that attempt. The patch is disabled by default, does nothing in
+server-authoritative mode until a real request transport exists, and must never
+write inventory, world, or network state itself.
+
+Do not broaden this patch to `PlacePiece`, `ConsumeResources`, or global input
+handlers without a new native-semantics review. A runtime test must confirm
+one click creates one local record, creates no real piece, consumes no material
+or stamina, and leaves ordinary placement unchanged when the config is off.
 
 ## Client/server artifact boundaries
 

@@ -1,8 +1,9 @@
 # CatosBuildHologram — Development Plan
 
-> **Status:** Phase 1 role-separated skeleton is implemented and builds. The
-> repository still has no blueprint feature behavior, runtime load evidence,
-> network evidence, persistence evidence, or gameplay verification.
+> **Status:** Phase 2 client-only interception skeleton is implemented and
+> builds. The repository still has no hologram renderer, server blueprint
+> behavior, runtime load evidence, persistence evidence, or gameplay
+> verification.
 >
 > **Purpose:** Let players plan construction locally on vanilla servers, or use
 > server-validated shared blueprints and support-safe ordered construction when
@@ -735,21 +736,17 @@ When CatosBuildSight is present on the same client:
 - [x] Add an explicit client-only mode that can run without the server artifact,
   with bounded detached local-plan storage and predicted-status labels disabled
   by default where native evidence is insufficient.
-- [ ] **Verify:** both artifacts build and load in their correct processes; the
-  client artifact is not deployed to the server and the server artifact is not
-  loaded as a client renderer, and the client-only mode works against a vanilla
-  server without protocol errors. Build and package checks pass; runtime and
-  gameplay evidence remain pending.
 
 ### Phase 2 — Blueprint records and native placement interception
 
-- [ ] Implement the client native-preview controller and blueprint-mode UX.
-- [ ] Implement detached local plan records for vanilla-server mode, clearly
-  separate from server-owned records.
+- [x] Implement the client native-preview controller and opt-in blueprint-mode
+  configuration seam. Visual UX remains a Phase 3 responsibility.
+- [x] Implement bounded detached local plan records for vanilla-server mode,
+  clearly separate from server-owned records.
 - [ ] Implement guided native placement that restores one local plan at a time
   and removes it only after observing a confirmed real piece.
-- [ ] Investigate the optional native-input assist; keep it disabled unless it
-  uses ordinary native actions and passes the no-packet-fabrication gate.
+- [x] Investigate the optional native-input assist boundary; it remains disabled
+  until ordinary-native-input and safety tests pass.
 - [ ] Implement server validation of authenticated player, piece identity,
   canonical transform, range, permissions, quotas, and native placement rules.
 - [ ] Create server-owned detached blueprint records with revisions and reason
@@ -760,7 +757,9 @@ When CatosBuildSight is present on the same client:
 - [ ] **Verify:** confirmed previews become one persistent blueprint with no
   real piece/material mutation in enhanced mode; vanilla mode stores only local
   data and still leaves the server unchanged; reconnect and restart recover
-  each mode according to its own persistence contract.
+  each mode according to its own persistence contract. Static build/package
+  checks pass; runtime interception, persistence, and gameplay evidence remain
+  pending.
 
 ### Phase 3 — Hologram rendering and server status colors
 

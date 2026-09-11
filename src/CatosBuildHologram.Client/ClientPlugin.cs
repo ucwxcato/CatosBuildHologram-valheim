@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using BepInEx;
 using CatosBuildHologram.Shared.Contracts;
+using HarmonyLib;
 
 namespace CatosBuildHologram.Client
 {
@@ -13,10 +14,16 @@ namespace CatosBuildHologram.Client
         internal const string PluginName = "Catos Build Hologram (Client)";
         internal const string PluginVersion = "0.1.0";
 
+        internal static ClientPlugin Instance { get; private set; }
+
         private ClientConfig _config;
         private LocalPlanStore _localPlans;
         private NetworkClient _network;
+        private NativeBuildPreviewController _previewController;
+        private Harmony _harmony;
         private bool _processGuardPassed;
+
+        internal NativeBuildPreviewController PreviewController => _previewController;
 
         private void Awake()
         {
@@ -32,6 +39,7 @@ namespace CatosBuildHologram.Client
             _config = new ClientConfig(Config);
             _localPlans = new LocalPlanStore(_config.MaxLocalPlans.Value);
             _network = new NetworkClient(PluginVersion);
+            Instance = this;
 
             if (!_config.Enabled.Value)
             {
@@ -39,7 +47,10 @@ namespace CatosBuildHologram.Client
                 return;
             }
 
-            Logger.LogInfo("Phase 1 client skeleton loaded; native blueprint interception is disabled.");
+            _previewController = new NativeBuildPreviewController(_config, _localPlans);
+            _harmony = new Harmony(PluginGuid);
+            _harmony.PatchAll(typeof(ClientPlugin).Assembly);
+            Logger.LogInfo("Phase 2 client skeleton loaded; blueprint interception is opt-in and local-only.");
         }
 
         private void Update()
@@ -54,13 +65,25 @@ namespace CatosBuildHologram.Client
 
         private void OnDestroy()
         {
+            _harmony?.UnpatchAll(PluginGuid);
             _localPlans?.Clear();
             _network?.ResetToVanilla();
+            _previewController = null;
+            _harmony = null;
             _localPlans = null;
             _network = null;
+            if (ReferenceEquals(Instance, this))
+            {
+                Instance = null;
+            }
         }
 
         internal AuthorityMode CurrentAuthorityMode => _network?.AuthorityMode ?? AuthorityMode.VanillaClientOnly;
         internal int LocalPlanCount => _localPlans?.Count ?? 0;
+
+        internal void LogLocalBlueprint(CatosBuildHologram.Shared.Contracts.BlueprintRecord blueprint)
+        {
+            Logger.LogInfo("Stored local blueprint " + blueprint.BlueprintId + " for " + blueprint.PieceTypeId);
+        }
     }
 }

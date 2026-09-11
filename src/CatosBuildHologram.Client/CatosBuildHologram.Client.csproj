@@ -22,5 +22,13 @@
       <HintPath>..\..\lib\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="assembly_valheim">
+      <HintPath>..\..\lib\assembly_valheim.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="0Harmony20">
+      <HintPath>..\..\lib\0Harmony20.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
 </Project>
