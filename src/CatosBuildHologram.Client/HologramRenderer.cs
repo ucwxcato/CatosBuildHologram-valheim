@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CatosBuildHologram.Shared.Contracts;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace CatosBuildHologram.Client
 {
@@ -291,10 +292,9 @@ namespace CatosBuildHologram.Client
 
                     try
                     {
-                        var material = renderer.material;
-                        if (material != null)
+                        foreach (var material in renderer.materials)
                         {
-                            material.color = color;
+                            ApplyHologramColor(material, color);
                         }
                     }
                     catch
@@ -328,6 +328,77 @@ namespace CatosBuildHologram.Client
                         rigidbody.detectCollisions = false;
                     }
                 }
+
+                foreach (var renderer in Root.GetComponentsInChildren<Renderer>(true))
+                {
+                    if (renderer == null)
+                    {
+                        continue;
+                    }
+
+                    renderer.enabled = true;
+                    var hologramMaterial = CreateHologramMaterial();
+                    if (hologramMaterial != null)
+                    {
+                        var materials = renderer.materials;
+                        for (var index = 0; index < materials.Length; index++)
+                        {
+                            materials[index] = hologramMaterial;
+                        }
+                        renderer.materials = materials;
+                    }
+                }
+            }
+        }
+
+        private static Material CreateHologramMaterial()
+        {
+            var shader = Shader.Find("Legacy Shaders/Particles/Additive")
+                ?? Shader.Find("Particles/Standard Unlit")
+                ?? Shader.Find("Unlit/Color");
+            if (shader == null)
+            {
+                return null;
+            }
+
+            var material = new Material(shader)
+            {
+                name = "CatosBuildHologram_GlowMaterial",
+                renderQueue = 3000
+            };
+            material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_ZWrite", 0);
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.EnableKeyword("_EMISSION");
+            return material;
+        }
+
+        private static void ApplyHologramColor(Material material, Color color)
+        {
+            if (material == null)
+            {
+                return;
+            }
+
+            var alpha = Mathf.Clamp(color.a, 0.3f, 0.65f);
+            var visibleColor = new Color(color.r, color.g, color.b, alpha);
+            var pulse = 0.9f + (Mathf.Sin(Time.time * 4f) * 0.1f);
+            var glowColor = new Color(color.r * 2.2f * pulse, color.g * 2.2f * pulse,
+                color.b * 2.2f * pulse, 1f);
+
+            if (material.HasProperty("_Color"))
+            {
+                material.SetColor("_Color", visibleColor);
+            }
+            if (material.HasProperty("_TintColor"))
+            {
+                material.SetColor("_TintColor", visibleColor);
+            }
+            if (material.HasProperty("_EmissionColor"))
+            {
+                material.SetColor("_EmissionColor", glowColor);
             }
         }
     }
