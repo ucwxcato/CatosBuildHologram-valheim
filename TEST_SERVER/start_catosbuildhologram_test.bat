@@ -1,0 +1,84 @@
+@echo off
+setlocal EnableExtensions
+
+set "REPO=%~dp0.."
+for %%I in ("%REPO%") do set "REPO=%%~fI"
+set "SERVER=C:\Program Files (x86)\Steam\steamapps\common\Valheim dedicated server"
+set "PROFILE=C:\Users\magni\AppData\Roaming\r2modmanPlus-local\Valheim\profiles\CatosBuildHologram"
+set "WORLD_SOURCE=C:\Users\magni\Documents\BotsnCoding\Valheim\Dedicated"
+set "SAVE_ROOT=C:\Users\magni\Documents\BotsnCoding\Valheim"
+set "MOUNT=%SAVE_ROOT%\worlds_local\Dedicated"
+set "CLIENT_PROJECT=%REPO%\src\CatosBuildHologram.Client\CatosBuildHologram.Client.csproj"
+set "SERVER_PROJECT=%REPO%\src\CatosBuildHologram.Server\CatosBuildHologram.Server.csproj"
+set "CLIENT_DLL=%REPO%\src\CatosBuildHologram.Client\bin\Release\net48\net48\CatosBuildHologram.Client.dll"
+set "SERVER_DLL=%REPO%\src\CatosBuildHologram.Server\bin\Release\net48\net48\CatosBuildHologram.Server.dll"
+set "CLIENT_PLUGINS=%PROFILE%\BepInEx\plugins"
+set "SERVER_PLUGINS=%SERVER%\BepInEx\plugins"
+
+tasklist /FI "IMAGENAME eq valheim.exe" 2>nul | find /I "valheim.exe" >nul && goto :running
+tasklist /FI "IMAGENAME eq valheim_server.exe" 2>nul | find /I "valheim_server.exe" >nul && goto :running
+
+if not exist "%SERVER%\valheim_server.exe" goto :missing
+if not exist "%PROFILE%\BepInEx\core\BepInEx.dll" goto :missing
+if not exist "%SERVER%\BepInEx\core\BepInEx.dll" goto :missing
+if not exist "%WORLD_SOURCE%\*.db2" goto :missing
+if not exist "%WORLD_SOURCE%\*.fwl2" goto :missing
+if not exist "%CLIENT_PROJECT%" goto :missing
+if not exist "%SERVER_PROJECT%" goto :missing
+
+dotnet build "%CLIENT_PROJECT%" -c Release
+if errorlevel 1 goto :failed
+dotnet build "%SERVER_PROJECT%" -c Release
+if errorlevel 1 goto :failed
+if not exist "%CLIENT_DLL%" goto :missing
+if not exist "%SERVER_DLL%" goto :missing
+
+if not exist "%SAVE_ROOT%\worlds_local" mkdir "%SAVE_ROOT%\worlds_local"
+if exist "%MOUNT%" goto :checkmount
+mklink /J "%MOUNT%" "%WORLD_SOURCE%" >nul
+if errorlevel 1 goto :failed
+goto :deploy
+
+:checkmount
+powershell -NoProfile -Command "$p=Get-Item -LiteralPath '%MOUNT%' -ErrorAction SilentlyContinue; if($null -eq $p -or -not ($p.Attributes -band [IO.FileAttributes]::ReparsePoint)){exit 1}; $t=@($p.Target)[0]; if((Get-Item -LiteralPath $t).FullName -ne (Get-Item -LiteralPath '%WORLD_SOURCE%').FullName){exit 1}"
+if errorlevel 1 goto :failed
+
+:deploy
+if not exist "%CLIENT_PLUGINS%" mkdir "%CLIENT_PLUGINS%"
+if not exist "%SERVER_PLUGINS%" mkdir "%SERVER_PLUGINS%"
+copy /Y "%CLIENT_DLL%" "%CLIENT_PLUGINS%\CatosBuildHologram.Client.dll" >nul
+if errorlevel 1 goto :failed
+copy /Y "%SERVER_DLL%" "%SERVER_PLUGINS%\CatosBuildHologram.Server.dll" >nul
+if errorlevel 1 goto :failed
+
+if exist "%REPO%\src\CatosBuildHologram.Shared\bin\Release\net48\net48\CatosBuildContracts.dll" (
+  copy /Y "%REPO%\src\CatosBuildHologram.Shared\bin\Release\net48\net48\CatosBuildContracts.dll" "%CLIENT_PLUGINS%\CatosBuildContracts.dll" >nul
+  copy /Y "%REPO%\src\CatosBuildHologram.Shared\bin\Release\net48\net48\CatosBuildContracts.dll" "%SERVER_PLUGINS%\CatosBuildContracts.dll" >nul
+)
+if exist "%REPO%\TEST_SERVER\adminlist.txt" copy /Y "%REPO%\TEST_SERVER\adminlist.txt" "%SAVE_ROOT%\adminlist.txt" >nul
+
+echo.
+echo CatosBuildHologram CLIENT + SERVER test
+echo Client: %CLIENT_PLUGINS%\CatosBuildHologram.Client.dll
+echo Server: %SERVER_PLUGINS%\CatosBuildHologram.Server.dll
+echo World:  %WORLD_SOURCE%
+echo Join:   127.0.0.1:2462
+echo Launch the CatosBuildHologram profile through r2modman.
+echo.
+cd /d "%SERVER%"
+"%SERVER%\valheim_server.exe" -name "CatosBuildHologram Test" -port 2462 -world "Dedicated" -password "696969" -savedir "%SAVE_ROOT%" -public 0
+exit /b %ERRORLEVEL%
+
+:running
+echo ERROR: Close Valheim and the dedicated server first.
+pause
+exit /b 1
+:missing
+echo ERROR: Required profile, world, project, executable, or DLL is missing.
+pause
+exit /b 1
+:failed
+echo ERROR: Build, junction validation, or deployment failed.
+pause
+exit /b 1
+
