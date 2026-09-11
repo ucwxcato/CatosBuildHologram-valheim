@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace CatosBuildHologram.Shared.Contracts
 {
@@ -83,5 +84,12 @@ namespace CatosBuildHologram.Shared.Contracts
         public string RequestId { get; set; }
         public uint ExpectedRevision { get; set; }
         public byte[] Payload { get; set; }
+    }
+
+    public sealed class BlueprintDelta
+    {
+        public uint WorldRevision { get; set; }
+        public List<BlueprintRecord> AddedOrChanged { get; set; }
+        public List<string> RemovedIds { get; set; }
     }
 }

@@ -40,4 +40,4 @@ foreach ($output in $outputs) {
     Write-Host "Verified $output"
 }
 
-Write-Host "Phase 1 artifacts built successfully."
+Write-Host "Release artifacts built successfully."

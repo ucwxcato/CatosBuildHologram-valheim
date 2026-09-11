@@ -19,11 +19,15 @@ namespace CatosBuildHologram.Client
         private ClientConfig _config;
         private LocalPlanStore _localPlans;
         private NetworkClient _network;
+        private HologramRenderer _renderer;
+        private GuidedBuildService _guided;
+        private HologramHud _hud;
         private NativeBuildPreviewController _previewController;
         private Harmony _harmony;
         private bool _processGuardPassed;
 
         internal NativeBuildPreviewController PreviewController => _previewController;
+        internal GuidedBuildService Guided => _guided;
 
         private void Awake()
         {
@@ -37,8 +41,10 @@ namespace CatosBuildHologram.Client
             }
 
             _config = new ClientConfig(Config);
-            _localPlans = new LocalPlanStore(_config.MaxLocalPlans.Value);
+            _localPlans = new LocalPlanStore(_config.MaxLocalPlans.Value,
+                System.IO.Path.Combine(Paths.ConfigPath, "CatosBuildHologram.localplans.json"));
             _network = new NetworkClient(PluginVersion);
+            _renderer = new HologramRenderer();
             Instance = this;
 
             if (!_config.Enabled.Value)
@@ -47,10 +53,12 @@ namespace CatosBuildHologram.Client
                 return;
             }
 
-            _previewController = new NativeBuildPreviewController(_config, _localPlans);
+            _previewController = new NativeBuildPreviewController(_config, _localPlans, _renderer);
+            _guided = new GuidedBuildService(_config, _localPlans, _renderer);
+            _hud = new HologramHud(_config, _renderer, _guided);
             _harmony = new Harmony(PluginGuid);
             _harmony.PatchAll(typeof(ClientPlugin).Assembly);
-            Logger.LogInfo("Phase 2 client skeleton loaded; blueprint interception is opt-in and local-only.");
+            Logger.LogInfo("Phase 3 client visuals loaded; blueprint interception remains opt-in and client-only until transport is verified.");
         }
 
         private void Update()
@@ -61,14 +69,29 @@ namespace CatosBuildHologram.Client
             }
 
             _network.Tick();
+            _guided?.Tick();
+            _renderer?.Sync(_localPlans.Snapshot());
+        }
+
+        private void OnGUI()
+        {
+            if (_config != null && _config.ShowStatusHud.Value)
+            {
+                _hud?.Draw(LocalPlanCount, CurrentAuthorityMode == AuthorityMode.ServerAuthoritative);
+            }
         }
 
         private void OnDestroy()
         {
             _harmony?.UnpatchAll(PluginGuid);
-            _localPlans?.Clear();
+            _guided?.Clear();
+            _renderer?.Clear();
+            _localPlans?.ClearRuntime();
             _network?.ResetToVanilla();
             _previewController = null;
+            _guided = null;
+            _hud = null;
+            _renderer = null;
             _harmony = null;
             _localPlans = null;
             _network = null;

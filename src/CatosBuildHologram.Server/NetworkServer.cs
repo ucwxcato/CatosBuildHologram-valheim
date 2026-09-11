@@ -6,12 +6,16 @@ namespace CatosBuildHologram.Server
     internal sealed class NetworkServer
     {
         private readonly RequestRouter _router = new RequestRouter();
+        private readonly BlueprintValidator _validator;
+        private readonly BlueprintRepository _repository;
         private readonly string _serverBuildVersion;
         private uint _worldRevision;
 
-        internal NetworkServer(string serverBuildVersion)
+        internal NetworkServer(string serverBuildVersion, BlueprintValidator validator, BlueprintRepository repository)
         {
             _serverBuildVersion = serverBuildVersion;
+            _validator = validator;
+            _repository = repository;
         }
 
         internal uint WorldRevision => _worldRevision;
@@ -40,6 +44,24 @@ namespace CatosBuildHologram.Server
             return ++_worldRevision;
         }
 
+        internal bool TryCreateBlueprint(AuthenticatedPeer peer, ProtocolMessage message,
+            BlueprintRecord candidate, out BlueprintRecord stored, out RejectionCode rejection)
+        {
+            stored = null;
+            if (!_router.TryValidate(peer, message, out rejection)
+                || !_validator.TryValidateCreate(peer, candidate, out rejection))
+            {
+                return false;
+            }
+
+            return _repository.TryCreate(candidate, out stored, out rejection);
+        }
+
+        internal BlueprintDelta CreateFullDelta()
+        {
+            return _repository.CreateFullDelta();
+        }
+
         internal void ForgetPeer(string connectionId)
         {
             _router.ForgetPeer(connectionId);
@@ -48,6 +70,7 @@ namespace CatosBuildHologram.Server
         internal void Clear()
         {
             _router.Clear();
+            _repository.Clear();
             _worldRevision = 0;
         }
     }

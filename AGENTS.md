@@ -12,11 +12,12 @@ The sibling client-only display companion is
 [`../CatosBuildSight/DOCS/devplan.md`](../CatosBuildSight/DOCS/devplan.md).
 Shared Valheim setup rules are in [`../world-setup.md`](../world-setup.md).
 
-The repository now contains the Phase 2 client-only interception skeleton.
-Do not claim that blueprint visuals, persistence, networking, installation, or
-gameplay is complete until the corresponding runtime evidence, network tests,
-persistence checks, and manual gameplay tests exist. A successful build is not
-gameplay verification.
+The repository now contains Phase 2 client-only interception/local persistence
+and a Phase 3 local hologram renderer/guided-placement skeleton. Do not claim
+that canonical server synchronization, support authority, autobuild,
+installation, or gameplay is complete until the corresponding runtime
+evidence, network tests, persistence checks, and manual gameplay tests exist.
+A successful build is not gameplay verification.
 
 ## Product and authority boundaries
 

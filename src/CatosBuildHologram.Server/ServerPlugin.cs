@@ -15,6 +15,7 @@ namespace CatosBuildHologram.Server
 
         private ServerConfig _config;
         private NetworkServer _network;
+        private BlueprintRepository _repository;
         private bool _processGuardPassed;
 
         private void Awake()
@@ -29,7 +30,9 @@ namespace CatosBuildHologram.Server
             }
 
             _config = new ServerConfig(Config);
-            _network = new NetworkServer(PluginVersion);
+            _repository = new BlueprintRepository(_config.MaxBlueprintsPerOwner.Value,
+                _config.MaxBlueprintsPerWorld.Value);
+            _network = new NetworkServer(PluginVersion, new BlueprintValidator(), _repository);
 
             if (!_config.Enabled.Value)
             {
@@ -37,7 +40,7 @@ namespace CatosBuildHologram.Server
                 return;
             }
 
-            Logger.LogInfo("Phase 1 server skeleton loaded; native network/build hooks are disabled.");
+            Logger.LogInfo("Phase 3 server validation/repository scaffolding loaded; native network/build hooks remain disabled.");
         }
 
         private void OnDestroy()

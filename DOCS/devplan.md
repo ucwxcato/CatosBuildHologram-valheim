@@ -1,9 +1,10 @@
 # CatosBuildHologram — Development Plan
 
-> **Status:** Phase 2 client-only interception skeleton is implemented and
-> builds. The repository still has no hologram renderer, server blueprint
-> behavior, runtime load evidence, persistence evidence, or gameplay
-> verification.
+> **Status:** Phase 2 client-only interception and local persistence are
+> implemented and build. Phase 3 has a bounded local hologram renderer,
+> guided native-placement seam, status-color mapping, and HUD in source. The
+> server transport, canonical server feed, support authority, runtime load
+> evidence, and gameplay verification remain pending.
 >
 > **Purpose:** Let players plan construction locally on vanilla servers, or use
 > server-validated shared blueprints and support-safe ordered construction when
@@ -743,16 +744,21 @@ When CatosBuildSight is present on the same client:
   configuration seam. Visual UX remains a Phase 3 responsibility.
 - [x] Implement bounded detached local plan records for vanilla-server mode,
   clearly separate from server-owned records.
-- [ ] Implement guided native placement that restores one local plan at a time
-  and removes it only after observing a confirmed real piece.
+- [x] Implement guided native placement that restores one local plan at a time
+  and removes it only after observing a matching confirmed real piece. Manual
+  in-game confirmation remains pending.
 - [x] Investigate the optional native-input assist boundary; it remains disabled
   until ordinary-native-input and safety tests pass.
+- [x] Add bounded detached server validation/repository scaffolding with owner,
+  transform, state, and quota checks. Native authentication, canonicalization,
+  persistence, and transport integration remain pending.
 - [ ] Implement server validation of authenticated player, piece identity,
   canonical transform, range, permissions, quotas, and native placement rules.
 - [ ] Create server-owned detached blueprint records with revisions and reason
   codes.
-- [ ] Implement safe persistence schema, atomic save path, load validation, and
-  recovery of malformed/in-progress records.
+- [x] Implement safe atomic persistence for detached client-only plan records,
+  including schema/load validation and fail-closed malformed data handling.
+  Server-owned persistence and in-progress recovery remain pending.
 - [ ] Implement bounded full/delta synchronization and revision-gap resync.
 - [ ] **Verify:** confirmed previews become one persistent blueprint with no
   real piece/material mutation in enhanced mode; vanilla mode stores only local
@@ -763,14 +769,18 @@ When CatosBuildSight is present on the same client:
 
 ### Phase 3 — Hologram rendering and server status colors
 
-- [ ] Implement client hologram rendering from canonical server records rather
-  than fake network Pieces.
-- [ ] Implement green/red/amber/gray status mapping and bounded reason text.
+- [x] Implement a bounded client hologram renderer from detached blueprint
+  records, using local native piece prefabs without creating fake network
+  Pieces. The canonical server-record feed remains pending.
+- [x] Implement green/red/amber/gray status-color mapping and a bounded HUD
+  status surface. Server reason/status authority remains pending.
 - [ ] Implement status refresh/revision handling and stale-state behavior.
-- [ ] Implement cleanup for deletion, build completion, disconnect, scene
-  transition, plugin disable, and renderer failure.
-- [ ] Implement explicit `Predicted` labelling and local-only rendering when
-  no server protocol is available.
+- [x] Implement local cleanup for removed/completed records and plugin
+  shutdown, with renderer failure isolation at the per-view boundary. Full
+  disconnect, scene-transition, and renderer-failure lifecycle verification
+  remains pending.
+- [x] Implement explicit client-only/local predicted-mode labelling and
+  local-only rendering when no server protocol is available.
 - [ ] **Verify:** enhanced mode shows the same canonical transform/status to
   multiple clients; vanilla mode remains local-only; red/unknown holograms are
   not assisted automatically and no stale mesh remains.

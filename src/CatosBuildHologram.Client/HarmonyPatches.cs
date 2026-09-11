@@ -22,4 +22,13 @@ namespace CatosBuildHologram.Client
             return false;
         }
     }
+
+    [HarmonyPatch(typeof(Player), nameof(Player.PlacePiece))]
+    internal static class PlayerPlacePiecePatch
+    {
+        private static void Postfix(Piece piece, UnityEngine.Vector3 pos, UnityEngine.Quaternion rot)
+        {
+            ClientPlugin.Instance?.Guided?.OnNativePiecePlaced(piece, pos, rot);
+        }
+    }
 }

@@ -8,13 +8,16 @@ namespace CatosBuildHologram.Client
     {
         private readonly ClientConfig _config;
         private readonly LocalPlanStore _localPlans;
+        private readonly HologramRenderer _renderer;
         private uint _nextRevision;
         private int _lastInterceptFrame = -1;
 
-        internal NativeBuildPreviewController(ClientConfig config, LocalPlanStore localPlans)
+        internal NativeBuildPreviewController(ClientConfig config, LocalPlanStore localPlans, HologramRenderer renderer)
         {
             _config = config;
             _localPlans = localPlans;
+            _renderer = renderer;
+            _nextRevision = localPlans.HighestRevision;
         }
 
         internal int LocalPlanCount => _localPlans.Count;
@@ -83,6 +86,8 @@ namespace CatosBuildHologram.Client
             {
                 return false;
             }
+
+            _renderer.ShowLocal(blueprint, piece);
 
             _lastInterceptFrame = Time.frameCount;
             if (_config.DebugLogging.Value)
