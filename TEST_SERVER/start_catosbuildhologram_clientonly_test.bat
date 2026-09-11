@@ -10,6 +10,7 @@ set "SAVE_ROOT=C:\Users\magni\Documents\BotsnCoding\Valheim"
 set "MOUNT=%SAVE_ROOT%\worlds_local\Dedicated"
 set "CLIENT_PROJECT=%REPO%\src\CatosBuildHologram.Client\CatosBuildHologram.Client.csproj"
 set "CLIENT_DLL=%REPO%\src\CatosBuildHologram.Client\bin\Release\net48\net48\CatosBuildHologram.Client.dll"
+set "CONTRACTS_DLL=%REPO%\src\CatosBuildHologram.Shared\bin\Release\net48\net48\CatosBuildContracts.dll"
 set "CLIENT_PLUGINS=%PROFILE%\BepInEx\plugins"
 set "SERVER_PLUGINS=%SERVER%\BepInEx\plugins"
 set "DEVCOMMANDS_SOURCE=%CLIENT_PLUGINS%\JereKuusela-Server_devcommands"
@@ -28,6 +29,7 @@ if not exist "%DEVCOMMANDS_SOURCE%\ServerDevcommands.dll" goto :missing
 dotnet build "%CLIENT_PROJECT%" -c Release
 if errorlevel 1 goto :failed
 if not exist "%CLIENT_DLL%" goto :missing
+if not exist "%CONTRACTS_DLL%" goto :missing
 
 if not exist "%SAVE_ROOT%\worlds_local" mkdir "%SAVE_ROOT%\worlds_local"
 if exist "%MOUNT%" goto :checkmount
@@ -42,6 +44,8 @@ if errorlevel 1 goto :failed
 :deploy
 if not exist "%CLIENT_PLUGINS%" mkdir "%CLIENT_PLUGINS%"
 copy /Y "%CLIENT_DLL%" "%CLIENT_PLUGINS%\CatosBuildHologram.Client.dll" >nul
+if errorlevel 1 goto :failed
+copy /Y "%CONTRACTS_DLL%" "%CLIENT_PLUGINS%\CatosBuildContracts.dll" >nul
 if errorlevel 1 goto :failed
 
 if not exist "%SERVER_PLUGINS%" mkdir "%SERVER_PLUGINS%"

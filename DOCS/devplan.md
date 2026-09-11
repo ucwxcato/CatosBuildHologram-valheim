@@ -1,8 +1,8 @@
 # CatosBuildHologram — Development Plan
 
-> **Status:** Phase 0 discovery artifacts are in place. The repository still
-> has no implementation, release artifacts, runtime load evidence, network
-> evidence, persistence evidence, or gameplay verification.
+> **Status:** Phase 1 role-separated skeleton is implemented and builds. The
+> repository still has no blueprint feature behavior, runtime load evidence,
+> network evidence, persistence evidence, or gameplay verification.
 >
 > **Purpose:** Let players plan construction locally on vanilla servers, or use
 > server-validated shared blueprints and support-safe ordered construction when
@@ -722,23 +722,24 @@ When CatosBuildSight is present on the same client:
 
 ### Phase 1 — Role-separated plugin skeleton
 
-- [ ] Create shared contracts with bounded serialization and no Unity object
+- [x] Create shared contracts with bounded payload limits and no Unity object
   dependencies.
-- [ ] Create server entry point and client entry point with verified process
-  guards and independent lifecycle handling.
-- [ ] Add server/client configuration with safe defaults and protocol
+- [x] Create server entry point and client entry point with process guards and
+  independent lifecycle handling. Runtime load verification remains pending.
+- [x] Add server/client configuration with safe defaults and protocol
   negotiation scaffolding.
-- [ ] Add authenticated request routing, request IDs, revisions, and isolated
-  failure handling.
-- [ ] Add reference/build/package scripts that distinguish server and client
+- [x] Add authenticated request routing, request IDs, revisions, duplicate
+  request rejection, and isolated transport-boundary scaffolding.
+- [x] Add reference/build/package scripts that distinguish server and client
   destinations.
-- [ ] Add an explicit client-only mode that can run without the server artifact,
-  with local-plan storage and predicted-status labels disabled by default where
-  native evidence is insufficient.
+- [x] Add an explicit client-only mode that can run without the server artifact,
+  with bounded detached local-plan storage and predicted-status labels disabled
+  by default where native evidence is insufficient.
 - [ ] **Verify:** both artifacts build and load in their correct processes; the
   client artifact is not deployed to the server and the server artifact is not
   loaded as a client renderer, and the client-only mode works against a vanilla
-  server without protocol errors.
+  server without protocol errors. Build and package checks pass; runtime and
+  gameplay evidence remain pending.
 
 ### Phase 2 — Blueprint records and native placement interception
 

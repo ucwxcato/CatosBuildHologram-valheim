@@ -12,6 +12,7 @@ set "CLIENT_PROJECT=%REPO%\src\CatosBuildHologram.Client\CatosBuildHologram.Clie
 set "SERVER_PROJECT=%REPO%\src\CatosBuildHologram.Server\CatosBuildHologram.Server.csproj"
 set "CLIENT_DLL=%REPO%\src\CatosBuildHologram.Client\bin\Release\net48\net48\CatosBuildHologram.Client.dll"
 set "SERVER_DLL=%REPO%\src\CatosBuildHologram.Server\bin\Release\net48\net48\CatosBuildHologram.Server.dll"
+set "CONTRACTS_DLL=%REPO%\src\CatosBuildHologram.Shared\bin\Release\net48\net48\CatosBuildContracts.dll"
 set "CLIENT_PLUGINS=%PROFILE%\BepInEx\plugins"
 set "SERVER_PLUGINS=%SERVER%\BepInEx\plugins"
 set "DEVCOMMANDS_SOURCE=%CLIENT_PLUGINS%\JereKuusela-Server_devcommands"
@@ -35,6 +36,7 @@ dotnet build "%SERVER_PROJECT%" -c Release
 if errorlevel 1 goto :failed
 if not exist "%CLIENT_DLL%" goto :missing
 if not exist "%SERVER_DLL%" goto :missing
+if not exist "%CONTRACTS_DLL%" goto :missing
 
 if not exist "%SAVE_ROOT%\worlds_local" mkdir "%SAVE_ROOT%\worlds_local"
 if exist "%MOUNT%" goto :checkmount
@@ -53,15 +55,15 @@ copy /Y "%CLIENT_DLL%" "%CLIENT_PLUGINS%\CatosBuildHologram.Client.dll" >nul
 if errorlevel 1 goto :failed
 copy /Y "%SERVER_DLL%" "%SERVER_PLUGINS%\CatosBuildHologram.Server.dll" >nul
 if errorlevel 1 goto :failed
+copy /Y "%CONTRACTS_DLL%" "%CLIENT_PLUGINS%\CatosBuildContracts.dll" >nul
+if errorlevel 1 goto :failed
+copy /Y "%CONTRACTS_DLL%" "%SERVER_PLUGINS%\CatosBuildContracts.dll" >nul
+if errorlevel 1 goto :failed
 
 xcopy "%DEVCOMMANDS_SOURCE%\*" "%DEVCOMMANDS_DEST%\" /E /I /Y >nul
 if errorlevel 4 goto :failed
 if not exist "%DEVCOMMANDS_DEST%\ServerDevcommands.dll" goto :failed
 
-if exist "%REPO%\src\CatosBuildHologram.Shared\bin\Release\net48\net48\CatosBuildContracts.dll" (
-  copy /Y "%REPO%\src\CatosBuildHologram.Shared\bin\Release\net48\net48\CatosBuildContracts.dll" "%CLIENT_PLUGINS%\CatosBuildContracts.dll" >nul
-  copy /Y "%REPO%\src\CatosBuildHologram.Shared\bin\Release\net48\net48\CatosBuildContracts.dll" "%SERVER_PLUGINS%\CatosBuildContracts.dll" >nul
-)
 if exist "%REPO%\TEST_SERVER\adminlist.txt" copy /Y "%REPO%\TEST_SERVER\adminlist.txt" "%SAVE_ROOT%\adminlist.txt" >nul
 
 echo.

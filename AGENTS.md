@@ -12,11 +12,11 @@ The sibling client-only display companion is
 [`../CatosBuildSight/DOCS/devplan.md`](../CatosBuildSight/DOCS/devplan.md).
 Shared Valheim setup rules are in [`../world-setup.md`](../world-setup.md).
 
-The repository currently contains planning scaffolding only. Do not claim that
-the mod is implemented, installed, loaded, persistent, or gameplay-verified
-until the client and server artifacts, runtime load evidence, persistence
-checks, network tests, and manual gameplay tests exist. A successful build is
-not gameplay verification.
+The repository now contains the Phase 1 role-separated plugin skeleton. Do not
+claim that blueprint behavior, persistence, networking, installation, or
+gameplay is complete until the corresponding runtime evidence, network tests,
+persistence checks, and manual gameplay tests exist. A successful build is not
+gameplay verification.
 
 ## Product and authority boundaries
 
@@ -93,10 +93,11 @@ CatosBuildHologram.Client.dll   native preview, input, rendering, UI
 CatosBuildContracts.dll         small versioned DTO/API surface, if needed
 ```
 
-The exact packaging is planned, not implemented. Shared code must not cause
-the client renderer to load server-only types or cause the server to require
-Unity presentation objects. If one assembly is eventually used, it must have
-verified process guards and role isolation before release.
+The Phase 1 packaging uses separate client and server entry-point assemblies
+plus `CatosBuildContracts.dll`. Shared code must not cause the client renderer
+to load server-only types or cause the server to require Unity presentation
+objects. Process guards and role isolation still require runtime verification
+before release.
 
 ## CatosBuildSight integration
 
